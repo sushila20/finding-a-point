@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drag the Point to the Coordinate</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 30px; }
+    #graph-container { position: relative; width: 440px; height: 440px; background: #f8f8f8; border: 1px solid #ccc; }
+    #graph-canvas { position: absolute; left: 0; top: 0; }
+    #point { position: absolute; width: 16px; height: 16px; background: #007bff; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 4px #333; cursor: grab; z-index: 2; }
+    #controls { margin-top: 20px; }
+    #feedback { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Drag the Point to the Coordinate</h2>
+  <div id="graph-container">
+    <canvas id="graph-canvas" width="440" height="440"></canvas>
+    <div id="point"></div>
+  </div>
+  <div id="controls">
+    <span>Target Coordinate: <span id="target"></span></span>
+    <button id="new-coord">New Coordinate</button>
+    <button id="try-again" style="display:none;">Try Again</button>
+  </div>
+  <div id="feedback"></div>
+  <script>
+    // Graph settings
+    const min = -10, max = 10, size = 400, margin = 20, step = size / (max - min);
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    const point = document.getElementById('point');
+    const feedback = document.getElementById('feedback');
+    const targetSpan = document.getElementById('target');
+    const newCoordBtn = document.getElementById('new-coord');
+    const tryAgainBtn = document.getElementById('try-again');
+
+    let target = {x: 0, y: 0};
+    let dragging = false;
+    let offset = {x: 0, y: 0};
+    let current = {x: 0, y: 0};
+
+    function drawGraph() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#bbb';
+      ctx.lineWidth = 1;
+      // Draw grid lines
+      for (let i = min; i <= max; i++) {
+        // Vertical
+        ctx.beginPath();
+        ctx.moveTo(margin + (i - min) * step, margin);
+        ctx.lineTo(margin + (i - min) * step, size + margin);
+        ctx.stroke();
+        // Horizontal
+        ctx.beginPath();
+        ctx.moveTo(margin, margin + (max - i) * step);
+        ctx.lineTo(size + margin, margin + (max - i) * step);
+        ctx.stroke();
+      }
+      // Draw axes
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      // X axis
+      ctx.beginPath();
+      ctx.moveTo(margin, margin + (max - 0) * step);
+      ctx.lineTo(size + margin, margin + (max - 0) * step);
+      ctx.stroke();
+      // Y axis
+      ctx.beginPath();
+      ctx.moveTo(margin + (0 - min) * step, margin);
+      ctx.lineTo(margin + (0 - min) * step, size + margin);
+      ctx.stroke();
+      // Draw numbers
+      ctx.fillStyle = '#222';
+      ctx.font = '12px sans-serif';
+      for (let i = min; i <= max; i++) {
+        // X numbers
+        ctx.fillText(i, margin + (i - min) * step - 7, size + margin + 15);
+        // Y numbers
+        if (i !== 0) ctx.fillText(i, margin - 18, margin + (max - i) * step + 5);
+      }
+      ctx.fillText('0', margin + (0 - min) * step - 7, size + margin + 15);
+      ctx.fillText('0', margin - 18, margin + (max - 0) * step + 5);
+    }
+
+    function coordToPixel(x, y) {
+      return {
+        left: margin + (x - min) * step - 8,
+        top: margin + (max - y) * step - 8
+      };
+    }
+
+    function setPoint(x, y) {
+      const pos = coordToPixel(x, y);
+      point.style.left = pos.left + 'px';
+      point.style.top = pos.top + 'px';
+      current.x = x;
+      current.y = y;
+    }
+
+    function randomCoord() {
+      let x = Math.floor(Math.random() * (max - min + 1)) + min;
+      let y = Math.floor(Math.random() * (max - min + 1)) + min;
+      return {x, y};
+    }
+
+    function setTarget() {
+      target = randomCoord();
+      targetSpan.textContent = `(${target.x}, ${target.y})`;
+      feedback.textContent = '';
+      tryAgainBtn.style.display = 'none';
+      setPoint(0, 0);
+    }
+
+    // Drag logic
+    point.onmousedown = function(e) {
+      dragging = true;
+      offset.x = e.clientX - point.offsetLeft;
+      offset.y = e.clientY - point.offsetTop;
+      point.style.cursor = 'grabbing';
+    };
+    document.onmousemove = function(e) {
+      if (!dragging) return;
+      let x = Math.round((e.clientX - offset.x - margin + 8) / step + min);
+      let y = Math.round(max - (e.clientY - offset.y - margin + 8) / step);
+      x = Math.max(min, Math.min(max, x));
+      y = Math.max(min, Math.min(max, y));
+      setPoint(x, y);
+    };
+    document.onmouseup = function() {
+      if (dragging) {
+        dragging = false;
+        point.style.cursor = 'grab';
+        // Check answer
+        if (current.x === target.x && current.y === target.y) {
+          feedback.textContent = 'Correct!';
+          tryAgainBtn.style.display = 'none';
+        } else {
+          feedback.textContent = 'Incorrect. Try again!';
+          tryAgainBtn.style.display = 'inline';
+        }
+      }
+    };
+
+    newCoordBtn.onclick = setTarget;
+    tryAgainBtn.onclick = function() {
+      setPoint(0, 0);
+      feedback.textContent = '';
+      tryAgainBtn.style.display = 'none';
+    };
+
+    drawGraph();
+    setTarget();
+  </script>
+</body>
+</html>
